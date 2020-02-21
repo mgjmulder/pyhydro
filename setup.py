@@ -10,6 +10,5 @@ setup(name='pyhydro',
       install_requires=['geopandas',
                         'numpy',
                         'pandas',
-                        'shapely',
-                        'time'],
+                        'shapely'],
       zip_safe=False)
