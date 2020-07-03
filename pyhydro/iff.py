@@ -7,20 +7,22 @@ import shapely
 
 def import_iff(path_iff, report=False):
     '''
-    Function to import data of .iff IMOD Flowpath File and return dataframe.
+    Import data from .iff iMOD flowpath file and return dataframe
+    
     
     Parameters
     ----------
     path_iff : str
-        Path to .iff file location.
+        Path to .iff file
     report : bool
-        boolean to print progress report of function. Either True or False. The default is False.
+        boolean to print progress report. Either True or False. The default is False
 
     Returns
     -------
     data : pd.DataFrame
-        Output dataframe which contains flowpath data of imported .iff file.
+        dataframe with flowpath data of imported .iff file
     '''
+    
     
     ## Open .iff file
     iff_header = {}
@@ -52,7 +54,7 @@ def import_iff(path_iff, report=False):
     ## Close .iff file
     iff.close()
     if report:
-        print('IMOD Flowpath File .iff imported with',len(data.loc[:, 'PARTICLE_NUMBER'].unique()),'flowpaths.')
+        print('iMOD flowpath file .iff imported with',len(data.loc[:, 'PARTICLE_NUMBER'].unique()),'flowpaths.')
     return data
 
 
@@ -60,19 +62,20 @@ def extract_endpointwell(data, well_cells, report=False):
     '''
     Extract all flowpaths which end up at wells. 
     
+    
     Parameters
     ----------
-    Data : pd.DataFrame
+    data : pd.DataFrame
         DataFrame with imported .iff flowpath data
-    Well_Cells : list
+    well_cells : list
         List containing locations [row, column] of all well cells.
-        Example for two wells at cells (10,20) and (5, 10): Well_Cells = [[10, 20], [5, 10]]
+        Example for two wells at cells (10,20) and (5, 10): well_cells = [[10, 20], [5, 10]]
     report : bool
         boolean to print progress report of function. Either True or False. The default is False.
 
     Returns
     -------
-    Output_data : pd.DataFrame
+    data_output : pd.DataFrame
         Dataframe containing flowpath data of all flowpaths that end up in given well cells.
 
     '''
@@ -100,9 +103,10 @@ def extract_endpointwell(data, well_cells, report=False):
     return data_output
 
 
-def invert_time(data, report=False):
+def invert_flowpath(data, report=False):
     '''
     Function to change direction of flow of particle along a flowpath, thus inverting the travel time along a flowpath.
+    
     
     Parameters
     ----------
@@ -130,7 +134,7 @@ def invert_time(data, report=False):
     return data_inverted
 
 
-def cutoff_time(data, tmax=25, report=False):
+def cutoff_flowpath(data, tmax=25, report=False):
     '''
     Function to cutoff flowpaths at give time tmax. 
 
@@ -160,6 +164,7 @@ def cutoff_time(data, tmax=25, report=False):
 def get_geometry(data, line_type='single_line', crs={'init':'epsg:28992'}, save_shp=False, path_output='Output_lines.shp', report=False):
     '''
     Retrieves geometry data of flowpath dataframe and optionally saves geodataframe to shapefile.
+
 
     Parameters
     ----------
@@ -264,6 +269,7 @@ def get_geometry(data, line_type='single_line', crs={'init':'epsg:28992'}, save_
 def dissolve_geometry(data_gdf, save_shp=False, path_output='Output_DissolvedLines.shp', report=False):
     '''
     Function to dissolve geometry of imported flowpath data.
+
 
     Parameters
     ----------
