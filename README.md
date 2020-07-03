@@ -1,6 +1,8 @@
 # pyhydro
-Hydrology toolbox for Vitens
-
+Hydrology toolbox for Vitens, with functionalities for:
+- .iff iMOD flowpath data
+- .ipf iMOD flowpath data
+- KNMI weather station data
 
 # How to install??
 1. Clone the package and download .zip
