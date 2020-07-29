@@ -17,8 +17,12 @@ def import_ipf(path_ipf, report=False):
         
     Returns
     -------
-    data : pd.DataFrame
+    ipf_data : pd.DataFrame
         Dataframe containing the imported .ipf data
+    ipf_xs : array
+        array containing all x-coordinates of .ipf data
+    ipf_ys : array
+        array containing all y-coordinates of .ipf data
     '''
     
     
@@ -34,74 +38,40 @@ def import_ipf(path_ipf, report=False):
         print(str(Ndata), 'lines of flowpath data found')
         
     ## Import header lines.
-    header = []
+    ipf_header = []
     for i in range(Nheader):
-        header.append(file.readline().strip())
+        ipf_header.append(file.readline().strip())
     file.readline().strip()
     
     ## Import data lines. 
-    data = []
+    ipf_data = []
     for i in range(Ndata):
-        data.append(file.readline().strip().split())
+        ipf_data.append(file.readline().strip().split())
     file.close()
     
     ## Convert imported data to dataframe.
     if report:
         print('Converting .ipf-data to DataFrame')
-    data = pd.DataFrame(data=data, columns=header, dtype=np.float)    
-    return data
+    ipf_data = pd.DataFrame(data=ipf_data, columns=ipf_header, dtype=np.float)    
+    
+    ## Extracting x- and y-coordinates of imodpath data.
+    ipf_xs = ipf_data.loc[:, 'SP_XCRD.'].drop_duplicates().values
+    ipf_ys = ipf_data.loc[:, 'SP_YCRD.'].drop_duplicates().values
+    
+    ## Translating x- and y-coordinates to cols and row values of imodpath data.
+    for i, index in enumerate(ipf_data.index):
+        i_col = np.argmin(abs(ipf_xs - ipf_data.loc[index, 'SP_XCRD.']))
+        i_row = np.argmin(abs(ipf_ys - ipf_data.loc[index, 'SP_YCRD.']))
+    
+        ipf_data.loc[index, 'imodpath_col'] = i_col
+        ipf_data.loc[index, 'imodpath_row'] = i_row
+    
+    return ipf_data, ipf_xs, ipf_ys
 
 
-def ipf_to_coords(data_ipf, dx=25.0, report=False):
+def get_well_cells(wells, model_xs, model_ys, model_dx=25, report=False):
     '''
-    takes .ipf data and extracts x- and y-coordinates of raster
-    so basically extracts the extent of the .ipf data and converts to x- and y-coordinates.
-    
-    
-    Parameters
-    ----------
-    data_ipf : pd.DataFrame
-        Dataframe containing the imported .ipf data
-    dx : float
-        distance between x- and y- coordinates of .ipf data
-    report : bool
-        boolean to print progress report. Either True or False. The default is False
-        
-    Returns
-    -------
-    xs : array
-        array containing all x-coordinates of .ipf data
-    ys : array
-        array containing all y-coordinates of .ipf data
-    '''
-    
-    ## get extent of imported .ipf data
-    dy=dx
-    xmin = data_ipf.loc[:, 'SP_XCRD.'].min()
-    ymax = data_ipf.loc[:, 'SP_YCRD.'].max()
-    xmax = data_ipf.loc[:, 'SP_XCRD.'].max()
-    ymin = data_ipf.loc[:, 'SP_YCRD.'].min()
-    extent = [xmin-dx/2, ymax+dy/2, xmax+dx/2, ymin-dy/2]
-    if report:
-        print('Extent of imported .ipf data: [x_ul, y_ul, x_lr, y_lr] = ',extent)
-
-    ## get distance along x- and y-axis
-    xdist = (xmax + dx/2) - (xmin - dx/2)
-    ydist = (ymax + dy/2) - (ymin - dy/2)
-    
-    ## count number of rastercells along x- and y-axis
-    xcells = int(xdist / dx)
-    ycells = int(ydist / dy)
-    
-    ## extract x- and y- coordinates
-    xs = np.linspace(xmin, xmax, xcells)
-    ys = np.linspace(ymax, ymin, ycells)
-    
-    return xs, ys
-
-def get_well_cells(wells, xs, ys, dx=25, report=False):
-    '''
-    takes a dataframe with wells and converts coordinates to cell-numbers. 
+    takes a dataframe with wells and converts coordinates to cell-numbers of model. 
     so, basically converts x- and y- coordinates to column and row numbers.
     
     
@@ -110,12 +80,12 @@ def get_well_cells(wells, xs, ys, dx=25, report=False):
     wells : pd.DataFrame
         Dataframe containing the wells to extract flowpath data from.
         Dataframe contains at least a column "X" with x-coordinates and a column "Y" with y-coordinates.
-    xs : array
-        array containing all x-coordinates of .ipf data
-    ys : array
-        array containing all y-coordinates of .ipf data
-    dx : float
-        distance between x- and y- coordinates of .ipf data
+    model_xs : array
+        array containing all x-coordinates of iMOD model
+    model_ys : array
+        array containing all y-coordinates of iMOD model
+    model_dx : float
+        distance between x- and y- coordinates of iMOD model
     report : bool
         boolean to print progress report. Either True or False. The default is False
     
@@ -127,10 +97,10 @@ def get_well_cells(wells, xs, ys, dx=25, report=False):
         raster with marked locations of the wells. 
     '''
     
-    dy=dx
+    model_dy=-model_dx
     
     ## setting up output raster with well locations
-    well_bundle = np.zeros((len(ys), len(xs)))
+    well_bundle = np.zeros((len(model_ys), len(model_xs)))
     well_bundle =  well_bundle * np.nan
     
     if report:
@@ -140,24 +110,24 @@ def get_well_cells(wells, xs, ys, dx=25, report=False):
         well_x = wells.loc[well_index, 'X']
         well_y = wells.loc[well_index, 'Y']
         ## get x-coordinate of wells
-        for i, x in enumerate(xs):
-            if (well_x > (x-dx/2)) & (well_x < (x+dx/2)):
+        for i, x in enumerate(model_xs):
+            if (well_x > (x-model_dx/2)) & (well_x <= (x+model_dx/2)):
                 well_ICOL = i
                 wells.loc[well_index, 'ICOL'] = well_ICOL + 1
                 break
-            ## get y-coordinate of wells
-        for j, y in enumerate(ys):
-            if (well_y < (y+dy/2)) & (well_y > (y-dy/2)):
+            ## get y-coordinate of wells. Remember that dy=-dx
+        for j, y in enumerate(model_ys):
+            if (well_y >= (y+model_dy/2)) & (well_y < (y-model_dy/2)):
                 well_IROW = j   
                 wells.loc[well_index, 'IROW'] = well_IROW + 1
                 break
         well_bundle[j,i] = 1
     if report:
-        print('x- and y- coordinates of wells converted to row- and column-numbers')
+        print('x- and y- coordinates of wells converted to row- and column-numbers of model')
     return wells, well_bundle
 
 
-def flowpath_origin(wells, data_ipf, xs, ys, report=False):
+def flowpath_origin(wells, ipf_data, ipf_xs, ipf_ys, report=False):
     '''
     extracts all .ipf flowpaths that end up in wells. 
     requires a dataframe with wells containing row and column numbers. 
@@ -191,32 +161,33 @@ def flowpath_origin(wells, data_ipf, xs, ys, report=False):
     '''
     
     ## setting up dataframe for flowpaths that end up in wells
-    data_ipf_well = pd.DataFrame()
+    ipf_data_well = pd.DataFrame()
     
     if report:
         print('setting up output rasters for origins and traveltimes of provided flowpaths')
-    traveltimes = np.zeros((len(ys), len(xs)))
-    traveltimes = traveltimes * np.nan
-    origin = np.zeros((len(ys), len(xs)))
-    origin = origin * np.nan
+    ipf_traveltimes = np.zeros((len(ipf_ys), len(ipf_xs)))
+    ipf_traveltimes = ipf_traveltimes * np.nan
+    ipf_origin = np.zeros((len(ipf_ys), len(ipf_xs)))
+    ipf_origin = ipf_origin * np.nan
     
     if report:
         print('importing .ipf flowpath data for',str(len(wells)),'wells')
     for well_i, well_index in enumerate(wells.index):
         well_IROW = wells.loc[well_index, 'IROW']
         well_ICOL = wells.loc[well_index, 'ICOL']
-        well_data = data_ipf.loc[(data_ipf.loc[:, 'EP_IROW'] == well_IROW) & (data_ipf.loc[:, 'EP_ICOL'] == well_ICOL)].copy()
+        well_data = ipf_data.loc[(ipf_data.loc[:, 'EP_IROW'] == well_IROW) & (ipf_data.loc[:, 'EP_ICOL'] == well_ICOL)].copy()
         
         if len(well_data) > 0:
             well_data.loc[:, 'Well_nr'] = well_i
             well_data.loc[:, 'Well_code'] = wells.loc[well_index, 'Name']
-            data_ipf_well = data_ipf_well.append(well_data)
+            ipf_data_well = ipf_data_well.append(well_data)
             for flowpath_i, flowpath_index in enumerate(well_data.index):
-                ## note that python starts its counting at 0,0, while iMOD starts at 1,1. We need to correct for this. 
-                flowpath_SP_IROW = int(well_data.loc[flowpath_index, 'SP_IROW']) -1
-                flowpath_SP_ICOL = int(well_data.loc[flowpath_index, 'SP_ICOL']) -1
+                flowpath_SP_IROW = int(well_data.loc[flowpath_index, 'imodpath_row'])
+                flowpath_SP_ICOL = int(well_data.loc[flowpath_index, 'imodpath_col'])
                 
-                traveltimes[flowpath_SP_IROW, flowpath_SP_ICOL] = well_data.loc[flowpath_index, 'TIME(YEARS)']
-                origin[flowpath_SP_IROW, flowpath_SP_ICOL] = well_i
+                ipf_traveltimes[flowpath_SP_IROW, flowpath_SP_ICOL] = well_data.loc[flowpath_index, 'TIME(YEARS)']
+                ipf_origin[flowpath_SP_IROW, flowpath_SP_ICOL] = well_i
     
-    return origin, traveltimes, data_ipf_well
+    return ipf_origin, ipf_traveltimes, ipf_data_well
+
+
