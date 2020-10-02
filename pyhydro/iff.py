@@ -161,7 +161,7 @@ def cutoff_flowpath(data, tmax=25, layer=1, report=False):
     data_input = data.copy()
     data_lay = data_input.loc[data_input.loc[:, 'ILAY'] == layer]
     data_lay = data_lay.loc[data_lay.loc[:, 'TIME(YEARS)'] <= tmax]
-    particles = data_lay[:, 'PARTICLE_NUMBER'].unique()
+    particles = data_lay.loc[:, 'PARTICLE_NUMBER'].unique()
     
     data_output = []
     for i, particle in enumerate(particles):
