@@ -157,10 +157,19 @@ def cutoff_flowpath(data, tmax=25, layer=1, report=False):
     
     if report:
         print('Cutting off time of flowpaths at', str(tmax),'year(s).')
-    data_output = data.copy()
-    data_output = data_output.loc[data_output.loc[:, 'ILAY'] == layer]
-    data_output = data_output.loc[data_output.loc[:, 'TIME(YEARS)'] < tmax]
+    ## Get all particles that end up in layer, with <= tmax.
+    data_input = data.copy()
+    data_lay = data_input.loc[data_input.loc[:, 'ILAY'] == layer]
+    data_lay = data_lay.loc[data_lay.loc[:, 'TIME(YEARS)'] <= tmax]
+    particles = data_lay[:, 'PARTICLE_NUMBER'].unique()
     
+    data_output = []
+    for i, particle in enumerate(particles):
+        data_particle = data_input.loc[data.loc[:, 'PARTICLE_NUMBER'] == particle].values
+        data_output.extend(data_particle)
+    data_output = pd.DataFrame(data=data_output, columns=data.columns)
+    data_output = data_output.loc[data_output.loc[:, 'TIME(YEARS)'] <= tmax]
+
     return data_output
 
 
