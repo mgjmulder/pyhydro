@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='pyhydro',
-      version='0.4',
+      version='0.5',
       description='Hydrology toolbox of Vitens',
       url='https://github.com/Vitens/pyhydro/',
       author='Martijn Mulder',

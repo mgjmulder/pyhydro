@@ -55,8 +55,8 @@ def import_ipf(path_ipf, report=False):
     ipf_data = pd.DataFrame(data=ipf_data, columns=ipf_header, dtype=np.float)    
     
     ## Extracting x- and y-coordinates of imodpath data.
-    ipf_xs = ipf_data.loc[:, 'SP_XCRD.'].drop_duplicates().values
-    ipf_ys = ipf_data.loc[:, 'SP_YCRD.'].drop_duplicates().values
+    ipf_xs = ipf_data.loc[:, 'SP_XCRD.'].sort_values(ascending=True).drop_duplicates().values
+    ipf_ys = ipf_data.loc[:, 'SP_YCRD.'].sort_values(ascending=False).drop_duplicates().values
     
     ## Translating x- and y-coordinates to cols and row values of imodpath data.
     for i, index in enumerate(ipf_data.index):
