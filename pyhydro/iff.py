@@ -134,9 +134,9 @@ def invert_flowpath(data, report=False):
     return data_inverted
 
 
-def cutoff_flowpath(data, tmax=25, report=False):
+def cutoff_flowpath(data, tmax=25, layer=1, report=False):
     '''
-    Function to cutoff flowpaths at give time tmax. 
+    Function to cutoff flowpaths at give time tmax ending within layer. 
 
     Parameters
     ----------
@@ -144,6 +144,8 @@ def cutoff_flowpath(data, tmax=25, report=False):
         Dataframe which contains the imported flowpath data.
     tmax : np.float
         Time in years at which the flowpaths in 'data' are cutted off. Default is 25 years.
+    layer : int
+        Layer in which the flowpaths are cutted of. Default is layer 1. 
     report: bool
         boolean to print progress report of function. Either True or False. The default is False.
     
@@ -156,6 +158,7 @@ def cutoff_flowpath(data, tmax=25, report=False):
     if report:
         print('Cutting off time of flowpaths at', str(tmax),'year(s).')
     data_output = data.copy()
+    data_output = data_output.loc[data_output.loc[:, 'ILAY'] == layer]
     data_output = data_output.loc[data_output.loc[:, 'TIME(YEARS)'] < tmax]
     
     return data_output
